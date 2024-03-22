@@ -31,11 +31,11 @@ apt update -qq && apt -qq -y install \
     nasm \
     libx264-dev libfdk-aac-dev \
     libx265-dev libnuma-dev libvpx-dev libopus-dev libdav1d-dev libgnutls28-dev libunistring-dev libvulkan-dev vulkan-sdk \
-    gcc-12 g++-12 cpp-12 clang-14
-update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 12
-update-alternatives --install /usr/bin/cpp cpp /usr/bin/cpp-12 12
-update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 12
-update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 14
-export FFMPEG_RELEASE_VERSION=snapshot
-export CC=clang-14
-export CXX=clang++-14
+    gcc-12 g++-12 cpp-12 lsb-release software-properties-common
+wget https://apt.llvm.org/llvm.sh &&
+    chmod +x llvm.sh &&
+    yes | ./llvm.sh 18 &&
+    apt install lld-18 clang-18 llvm-18
+export CC=clang-18
+export CXX=clang++-18
+export LLVM=-18
