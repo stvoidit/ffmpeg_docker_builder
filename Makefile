@@ -1,5 +1,4 @@
 build:
-	# --no-cache
 	docker build --rm -f Dockerfile -t ffmpeg-docker:dev .
 copy-file:
 	docker create --name dummy ffmpeg-docker:dev

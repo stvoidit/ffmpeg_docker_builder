@@ -3,6 +3,7 @@ RUN mkdir ~/ffmpeg_sources ~/ffmpeg_build
 WORKDIR ~/ffmpeg_sources
 COPY scripts/0_install_libs.sh .
 RUN /bin/bash 0_install_libs.sh
+ENV CC=clang-18 CXX=clang++-18 LLVM=-18
 COPY scripts/1_compile_libsvtav1.sh .
 RUN /bin/bash 1_compile_libsvtav1.sh
 COPY scripts/2_compile_libvmaf.sh .
@@ -41,12 +42,12 @@ RUN cd ~/ffmpeg_sources/ffmpeg && PATH="$HOME/bin:$PATH" \
     --enable-nonfree \
     --enable-libsvtav1 \
     --enable-libvmaf \
+    --enable-static \
+    --enable-vulkan \
+    --enable-libglslang \
+    --enable-libdrm \
     --disable-doc \
     --disable-shared \
-    --enable-static \
     --disable-ffplay \
-    --disable-ffprobe \
-    --enable-vulkan \
-    --enable-libglslang
+    --disable-ffprobe
 RUN cd ~/ffmpeg_sources/ffmpeg && make install -j8
-RUN /root/bin/ffmpeg -version
