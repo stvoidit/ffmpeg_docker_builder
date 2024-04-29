@@ -10,4 +10,4 @@ copy-file:
 install:
 	mv ./ffmpeg ${HOME}/.local/bin/
 run:
-	docker run --rm -it -v ${PWD}/outfdir:/outdir ffmpeg-docker:dev bash
+	docker run --rm -it ffmpeg-docker:dev bash
