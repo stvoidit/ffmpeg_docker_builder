@@ -15,6 +15,8 @@ RUN apt update -qq && apt upgrade -y -qq && apt install -y -qq git-core wget && 
     libass-dev \
     libfreetype6-dev \
     libgnutls28-dev \
+    openssl \
+    libssl-dev \
     libmp3lame-dev \
     libsdl2-dev \
     libtool \
@@ -51,16 +53,20 @@ RUN ./configure \
     --prefix="docker-build" \
     --pkg-config-flags="--static" \
     --extra-libs="-lm -lpthread" \
-    --ld="clang++-18" \
     --cc="clang-18" \
     --cxx="clang++-18" \
+    --ld="g++-12" \
+    --ar="llvm-ar-18" \
+    --strip="llvm-strip-18" \
     --bindir="$HOME/bin" \
     --enable-cross-compile \
     --enable-libfdk-aac \
     --enable-pthreads \
     --enable-gpl \
+    --enable-version3 \
+    --enable-nonfree \
     --enable-pic \
-    --enable-gnutls \
+    --enable-openssl \
     --enable-libass \
     --enable-libfreetype \
     --enable-libmp3lame \
@@ -70,7 +76,6 @@ RUN ./configure \
     --enable-libvpx \
     --enable-libx264 \
     --enable-libx265 \
-    --enable-nonfree \
     --enable-libsvtav1 \
     --enable-libvmaf \
     --enable-static \
@@ -79,8 +84,6 @@ RUN ./configure \
     --enable-libdrm \
     --disable-w32threads \
     --disable-debug \
-    --disable-asm \
-    --disable-x86asm \
     --disable-doc \
     --disable-shared \
     --disable-ffplay \
