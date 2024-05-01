@@ -86,6 +86,5 @@ RUN ./configure \
     --disable-debug \
     --disable-doc \
     --disable-shared \
-    --disable-ffplay \
     --disable-ffprobe
 RUN make install -j$(nproc)

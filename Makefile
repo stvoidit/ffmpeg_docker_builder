@@ -6,8 +6,10 @@ build:
 copy-file:
 	docker create --name dummy ffmpeg-docker:dev
 	docker cp dummy:/root/bin/ffmpeg .
+	docker cp dummy:/root/bin/ffplay .
 	docker rm -f dummy
 install:
-	mv ./ffmpeg ${HOME}/.local/bin/
+	mv -v ./ffmpeg ${HOME}/.local/bin/
+	mv -v ./ffplay ${HOME}/.local/bin/
 run:
 	docker run --rm -it ffmpeg-docker:dev bash
