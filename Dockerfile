@@ -31,43 +31,48 @@ RUN apt update -qq && apt upgrade -y -qq && apt install -y -qq git-core wget && 
     pkg-config \
     texinfo \
     wget \
+    libtls-dev \
     yasm \
     zlib1g-dev \
-    nasm \
-    libx264-dev libfdk-aac-dev xxd \
+    libopenjp2-7-dev \
+    libpostproc-dev \
+    nasm g++-12 \
+    libx264-dev libfdk-aac-dev xxd python3.10-venv python3-pip \
     libnuma-dev libvpx-dev libopus-dev libdav1d-dev libgnutls28-dev libunistring-dev libvulkan-dev vulkan-sdk \
     lsb-release software-properties-common
 RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && yes | ./llvm.sh 18 && apt install lld-18 clang-18 llvm-18
 ENV CC=clang-18 CXX=clang++-18 LLVM=-18 LD=lld-18
-RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1.git && cd SVT-AV1/Build/linux && ./build.sh --enable-lto --install -xj$(nproc) release
+RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1.git && cd SVT-AV1/Build/linux && ./build.sh --enable-lto --install -x -j$(nproc) release
 
-# RUN git clone https://github.com/Netflix/vmaf.git && cd vmaf && git checkout $VMAF_TAG && meson libvmaf/build libvmaf -Denable_tests=false -Denable_docs=false --default-library=static --buildtype release && ninja -vC libvmaf/build && ninja -vC libvmaf/build install
+RUN git clone --branch master https://bitbucket.org/multicoreware/x265_git.git && cd x265_git/build/linux && cmake -G"Unix Makefiles" -DENABLE_SHARED=off ../../source && make -j$(nproc) && make install
 
-RUN git clone https://bitbucket.org/multicoreware/x265_git.git && cd x265_git/build/linux && cmake -G"Unix Makefiles" -DENABLE_SHARED=off ../../source && make -j$(nproc) && make install
+RUN git clone --branch $VMAF_TAG https://github.com/Netflix/vmaf.git && cd vmaf && make deps && .venv/bin/meson setup libvmaf/build libvmaf --buildtype release -Denable_avx512=true -Denable_float=true --default-library=static && .venv/bin/ninja -vC libvmaf/build install
 
-RUN git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git && cd FFmpeg && git checkout $FFMPEG_TAG
+RUN git clone --depth=1 --branch $FFMPEG_TAG https://github.com/FFmpeg/FFmpeg.git && cd FFmpeg
 WORKDIR /ffmpeg_sources/FFmpeg
 
+# --extra-ldflags='-flto -fuse-linker-plugin -fuse-ld=lld-18'
 RUN ./configure \
     --target-os="linux" \
     --arch="x86_64" \
     --prefix="/usr/local" \
     --pkg-config-flags="--static" \
     --extra-libs="-lm -lpthread" \
-    --extra-ldflags='-flto -fuse-linker-plugin -fuse-ld=lld-18' \
+    --extra-ldflags='-fuse-linker-plugin' \
     --cc="clang-18" \
     --cxx="clang++-18" \
+    --ld="g++-12" \
     --bindir="$HOME/bin" \
     --enable-cross-compile \
-    --enable-lto \
     --enable-libfdk-aac \
     --enable-pthreads \
     --enable-gpl \
     --enable-version3 \
     --enable-nonfree \
-    --enable-pic \
+    --enable-libopenjpeg \
     --enable-openssl \
     --enable-libass \
+    --enable-libtls \
     --enable-libfreetype \
     --enable-libmp3lame \
     --enable-libopus \
@@ -85,6 +90,6 @@ RUN ./configure \
     --disable-debug \
     --disable-doc \
     --disable-shared \
-    --disable-ffprobe
-# --enable-libvmaf \
+    --disable-ffprobe \
+    --enable-libvmaf
 RUN make install -j$(nproc)
