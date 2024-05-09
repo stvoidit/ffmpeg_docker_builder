@@ -37,7 +37,7 @@ RUN apt-get -qq -y install \
     zlib1g-dev \
     libopenjp2-7-dev \
     libpostproc-dev \
-    nasm g++-12 \
+    nasm g++-12 diffutils \
     libxml2-dev \
     libx264-dev libfdk-aac-dev xxd python3.10-venv python3-pip \
     libnuma-dev libvpx-dev libopus-dev libdav1d-dev libgnutls28-dev libunistring-dev libvulkan-dev vulkan-sdk \
@@ -47,6 +47,9 @@ ENV CC=clang-18 CXX=clang++-18 LLVM=-18 LD=lld-18
 RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1.git && cd SVT-AV1/Build/linux && ./build.sh --enable-lto --install -x -j$(nproc) release
 
 RUN git clone --branch master https://bitbucket.org/multicoreware/x265_git.git && cd x265_git/build/linux && cmake -G"Unix Makefiles" -DENABLE_SHARED=off ../../source && make -j$(nproc) && make install
+
+ARG AMF_VERSION=v1.4.33
+RUN git clone --depth 1 --branch $AMF_VERSION https://github.com/GPUOpen-LibrariesAndSDKs/AMF.git && mkdir -p /usr/local/include/AMF && cp -r AMF/amf/public/include/* /usr/local/include/AMF
 
 # RUN git clone --branch $VMAF_TAG https://github.com/Netflix/vmaf.git && cd vmaf && make deps && .venv/bin/meson setup libvmaf/build libvmaf --buildtype release -Denable_avx512=true -Denable_float=true --default-library=static && .venv/bin/ninja -vC libvmaf/build install
 
@@ -89,6 +92,7 @@ RUN ./configure \
     --enable-libglslang \
     --enable-libdrm \
     --enable-pic \
+    --enable-amf \
     --disable-shared \
     --disable-debug \
     --disable-doc \
