@@ -1,15 +1,20 @@
 
-all: build copy-file install
+.PHONY: all
+all: build compile
 
+.PHONY: build
 build:
 	docker build --rm -f Dockerfile -t ffmpeg-docker:dev .
-copy-file:
-	docker create --name dummy ffmpeg-docker:dev
-	docker cp dummy:/root/bin/ffmpeg .
-	docker cp dummy:/root/bin/ffplay .
-	docker rm -f dummy
+
+.PHONY: compile
+compile:
+	echo ${PWD}
+	docker run --rm --user="$(id -un):$(id -ug)" -v ${PWD}:/ffmpeg_build ffmpeg-docker:dev
+
+.PHONY: install
 install:
-	mv -v ./ffmpeg ${HOME}/.local/bin/
-	mv -v ./ffplay ${HOME}/.local/bin/
+	mv -v ./ffmpeg ./ffplay -t ${HOME}/.local/bin/
+
+.PHONY: run
 run:
 	docker run --rm -it ffmpeg-docker:dev bash
