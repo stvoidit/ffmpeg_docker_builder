@@ -29,8 +29,8 @@ RUN apt-get -qq -y install \
     libdrm-dev \
     liblzma-dev \
     libxcb-xfixes0-dev \
-    meson \
-    ninja-build \
+    libv4l-dev \
+    libjpeg-dev \
     pkg-config \
     texinfo \
     wget \
@@ -100,6 +100,7 @@ RUN ./configure \
     --enable-pic \
     --enable-amf \
     --enable-opengl \
+    --enable-libv4l2 \
     --disable-shared \
     --disable-debug \
     --disable-doc \
