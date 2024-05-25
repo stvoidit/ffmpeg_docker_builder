@@ -31,6 +31,11 @@ RUN apt-get -qq -y install \
     libxcb-xfixes0-dev \
     libv4l-dev \
     libjpeg-dev \
+    librtmp-dev \
+    libgcrypt-dev \
+    libiec61883-dev \
+    libdc1394-dev \
+    libavc1394-dev \
     pkg-config \
     texinfo \
     wget \
@@ -73,13 +78,17 @@ RUN ./configure \
     --cc="clang-18" \
     --cxx="clang++-18" \
     --ar="llvm-ar-18" \
+    --toolchain="clang-usan" \
     --bindir="$HOME/bin" \
     --enable-cross-compile \
-    --enable-libfdk-aac \
+    --enable-thumb \
+    --enable-pic \
     --enable-pthreads \
     --enable-gpl \
     --enable-version3 \
     --enable-nonfree \
+    --enable-amf \
+    --enable-libfdk-aac \
     --enable-libopenjpeg \
     --enable-openssl \
     --enable-libass \
@@ -97,14 +106,16 @@ RUN ./configure \
     --enable-vulkan \
     --enable-libglslang \
     --enable-libdrm \
-    --enable-pic \
-    --enable-amf \
     --enable-opengl \
     --enable-libv4l2 \
+    --enable-gmp \
+    --enable-gcrypt \
+    --enable-libpulse \
+    --enable-libdc1394 \
+    --enable-libiec61883 \
     --disable-shared \
     --disable-debug \
     --disable-doc \
-    --enable-libpulse \
     --disable-shared \
     --disable-ffprobe
 CMD make install -j$(nproc) && mv -v ffmpeg ffplay -t /ffmpeg_build/

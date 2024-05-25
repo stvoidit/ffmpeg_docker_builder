@@ -17,4 +17,4 @@ install:
 
 .PHONY: run
 run:
-	docker run --rm -it ffmpeg-docker:dev bash
+	docker run --rm -it --user="$(id -un):$(id -ug)" -v ${PWD}:/ffmpeg_build ffmpeg-docker:dev bash
