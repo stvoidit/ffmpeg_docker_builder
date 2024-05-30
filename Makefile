@@ -13,7 +13,7 @@ compile:
 
 .PHONY: install
 install:
-	mv -v ./ffmpeg ./ffplay -t ${HOME}/.local/bin/
+	mv -v ./ffmpeg ./ffplay ./ffprobe -t ${HOME}/.local/bin/
 
 .PHONY: run
 run:

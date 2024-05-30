@@ -116,6 +116,5 @@ RUN ./configure \
     --disable-shared \
     --disable-debug \
     --disable-doc \
-    --disable-shared \
-    --disable-ffprobe
-CMD make install -j$(nproc) && mv -v ffmpeg ffplay -t /ffmpeg_build/
+    --disable-shared
+CMD make install -j$(nproc) && mv -v ffmpeg ffplay ffprobe -t /ffmpeg_build/
