@@ -54,7 +54,7 @@ ENV CC=clang-18 CXX=clang++-18 LLVM=-18 LD=lld-18 AR=llvm-ar-18 HOSTCC=clang-18 
 
 RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1.git && cd SVT-AV1/Build/linux && ./build.sh release --enable-lto --install -x -j$(nproc)
 
-RUN git clone --branch master https://bitbucket.org/multicoreware/x265_git.git && cd x265_git/build/linux && cmake -G"Unix Makefiles" -DENABLE_SHARED=off ../../source && make -j$(nproc) && make install
+RUN git clone --branch master https://bitbucket.org/multicoreware/x265_git.git && cd x265_git/build/linux && cmake -G"Unix Makefiles" -DENABLE_SHARED=off -DCMAKE_CXX_FLAGS="-flto" ../../source && make -j$(nproc) && make install
 
 ARG AMF_VERSION=v1.4.33
 RUN git clone --depth 1 --branch ${AMF_VERSION} https://github.com/GPUOpen-LibrariesAndSDKs/AMF.git && mkdir -p /usr/local/include/AMF && cp -r AMF/amf/public/include/* /usr/local/include/AMF
