@@ -1,12 +1,12 @@
 FROM ubuntu:22.04
 RUN sed -Ei 's/http:\/\/[archive|security]+.ubuntu.com/http:\/\/mirror.docker.ru/gm' /etc/apt/sources.list
-ENV PATH="$HOME/bin/:/usr/local/bin/:/usr/lib/llvm-18/bin/:$PATH"
-ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib/:/usr/local/lib/x86_64-linux-gnu/:/usr/lib/:/usr/lib/x86_64-linux-gnu/"
+ENV PATH="$HOME/bin/:/usr/bin/:/usr/local/bin/:/usr/lib/llvm-18/bin/:/usr/local/include/:$PATH"
+ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib/:/usr/local/lib/x86_64-linux-gnu/:/usr/lib/:/usr/lib/x86_64-linux-gnu/:/usr/local/include/"
 ENV PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/lib/pkgconfig:/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig"
 RUN mkdir /ffmpeg_sources /ffmpeg_build
 WORKDIR /ffmpeg_sources
-RUN apt-get update -qq && apt-get upgrade -y -qq && apt-get install -y -qq git-core wget && wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | tee /etc/apt/trusted.gpg.d/lunarg.asc && wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list http://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list && apt-get update -qq
-RUN apt-get -qq -y install \
+RUN apt-get update -qq && apt-get upgrade -y && apt-get install -y git-core wget && wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | tee /etc/apt/trusted.gpg.d/lunarg.asc && wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list http://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list && apt-get update -qq
+RUN apt-get -y install \
     autoconf \
     automake \
     build-essential \
@@ -41,14 +41,18 @@ RUN apt-get -qq -y install \
     wget \
     libtls-dev \
     yasm \
+    libxxhash-dev \
     zlib1g-dev \
     libopenjp2-7-dev \
     libpostproc-dev \
-    nasm g++-12 diffutils \
+    libunwind-dev \
+    nasm diffutils \
     libxml2-dev \
+    liblcms2-dev \
     libx264-dev libfdk-aac-dev xxd python3.10-venv python3-pip \
     libnuma-dev libvpx-dev libopus-dev libdav1d-dev libgnutls28-dev libunistring-dev libvulkan-dev vulkan-sdk \
     lsb-release software-properties-common
+RUN python3 -m pip install -U meson ninja
 RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && yes | ./llvm.sh 18 && apt-get -y install lld-18 clang-18 llvm-18
 ENV CC=clang-18 CXX=clang++-18 LLVM=-18 LD=lld-18 AR=llvm-ar-18 HOSTCC=clang-18 HOSTCXX=clang++-18 HOSTAR=llvm-ar-18 HOSTLD=ld.lld-18
 
@@ -62,12 +66,17 @@ RUN git clone --depth 1 --branch ${AMF_VERSION} https://github.com/GPUOpen-Libra
 # ARG VMAF_TAG=master
 # RUN git clone --branch ${VMAF_TAG} https://github.com/Netflix/vmaf.git && cd vmaf && make deps && .venv/bin/meson setup libvmaf/build libvmaf --buildtype release -Denable_avx512=true -Denable_float=true --default-library=static && .venv/bin/ninja -vC libvmaf/build install
 
+# RUN git clone https://github.com/google/shaderc && cd shaderc && ./utils/git-sync-deps && mkdir build && cd build && cmake -GNinja -DENABLE_SHARED=off -DCMAKE_CXX_FLAGS="-flto" -DCMAKE_BUILD_TYPE=Release .. && ninja -j 16
+
+# ARG LIBPLACEBO_TAG="v5.264.1"
+# RUN git clone --recursive --branch ${LIBPLACEBO_TAG} https://code.videolan.org/videolan/libplacebo && cd libplacebo && meson setup build --buildtype=release --default-library=static --wipe && ninja -j 16 -Cbuild install
+
 ARG FFMPEG_TAG=master
 RUN git clone --depth=1 --branch ${FFMPEG_TAG} https://github.com/FFmpeg/FFmpeg.git && cd FFmpeg
 WORKDIR /ffmpeg_sources/FFmpeg
 
-# --extra-ldflags='-flto -fuse-linker-plugin -fuse-ld=lld-18'
-# --enable-libvmaf --ld="g++-12" \
+# # --enable-libvmaf --ld="g++-12" \
+# --enable-libplacebo \
 RUN ./configure \
     --target-os="linux" \
     --arch="x86_64" \
@@ -78,8 +87,6 @@ RUN ./configure \
     --cc="clang-18" \
     --cxx="clang++-18" \
     --ar="llvm-ar-18" \
-    --toolchain="clang-usan" \
-    --bindir="$HOME/bin" \
     --enable-cross-compile \
     --enable-thumb \
     --enable-pic \
@@ -115,6 +122,5 @@ RUN ./configure \
     --enable-libiec61883 \
     --disable-shared \
     --disable-debug \
-    --disable-doc \
-    --disable-shared
+    --disable-doc
 CMD make install -j$(nproc) && mv -v ffmpeg ffplay ffprobe -t /ffmpeg_build/
