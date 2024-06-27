@@ -84,10 +84,12 @@ RUN ./configure \
     --pkg-config-flags="--static" \
     --extra-libs="-lm -lpthread" \
     --extra-ldflags='-flto -fuse-linker-plugin -fuse-ld=lld-18' \
+    --extra-cflags='-march=native' \
     --cc="clang-18" \
     --cxx="clang++-18" \
     --ar="llvm-ar-18" \
     --enable-cross-compile \
+    --enable-lto \
     --enable-thumb \
     --enable-pic \
     --enable-pthreads \
