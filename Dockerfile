@@ -53,7 +53,7 @@ RUN apt-get -y install \
     libnuma-dev libvpx-dev libopus-dev libdav1d-dev libgnutls28-dev libunistring-dev libvulkan-dev vulkan-sdk \
     lsb-release software-properties-common
 RUN python3 -m pip install -U meson ninja
-RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && yes | ./llvm.sh 18 && apt-get -y install lld-18 clang-18 llvm-18
+RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && yes | ./llvm.sh 18 && apt-get -y install lld-18 clang-18 llvm-18 && ldconfig
 ENV CC=clang-18 CXX=clang++-18 LLVM=-18 LD=lld-18 AR=llvm-ar-18 HOSTCC=clang-18 HOSTCXX=clang++-18 HOSTAR=llvm-ar-18 HOSTLD=ld.lld-18
 
 RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1.git && cd SVT-AV1/Build/linux && ./build.sh release --enable-lto --install -x -j$(nproc)
@@ -72,7 +72,7 @@ RUN git clone --depth 1 --branch ${AMF_VERSION} https://github.com/GPUOpen-Libra
 # RUN git clone --recursive --branch ${LIBPLACEBO_TAG} https://code.videolan.org/videolan/libplacebo && cd libplacebo && meson setup build --buildtype=release --default-library=static --wipe && ninja -j 16 -Cbuild install
 
 ARG FFMPEG_TAG=master
-RUN git clone --depth=1 --branch ${FFMPEG_TAG} https://github.com/FFmpeg/FFmpeg.git && cd FFmpeg
+RUN git clone --depth=1 --branch ${FFMPEG_TAG} https://github.com/FFmpeg/FFmpeg.git && cd FFmpeg && ldconfig
 WORKDIR /ffmpeg_sources/FFmpeg
 
 # # --enable-libvmaf --ld="g++-12" \
@@ -89,7 +89,7 @@ RUN ./configure \
     --cxx="clang++-18" \
     --ar="llvm-ar-18" \
     --enable-cross-compile \
-    --enable-lto \
+    --enable-lto=full \
     --enable-thumb \
     --enable-pic \
     --enable-pthreads \
@@ -122,6 +122,10 @@ RUN ./configure \
     --enable-libpulse \
     --enable-libdc1394 \
     --enable-libiec61883 \
+    --enable-libxcb \
+    --enable-libxcb-shm \
+    --enable-libxcb-xfixes \
+    --enable-libxcb-shape \
     --disable-shared \
     --disable-debug \
     --disable-doc
