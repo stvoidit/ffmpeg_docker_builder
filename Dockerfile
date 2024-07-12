@@ -1,8 +1,8 @@
 FROM ubuntu:22.04
 RUN sed -Ei 's/http:\/\/[archive|security]+.ubuntu.com/http:\/\/mirror.docker.ru/gm' /etc/apt/sources.list
-ENV PATH="$HOME/bin/:/usr/bin/:/usr/local/bin/:/usr/lib/llvm-18/bin/:/usr/local/include/:$PATH"
-ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib/:/usr/local/lib/x86_64-linux-gnu/:/usr/lib/:/usr/lib/x86_64-linux-gnu/:/usr/local/include/"
-ENV PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/lib/pkgconfig:/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig"
+ENV PATH="/usr/bin:/usr/local/bin:/usr/lib/llvm-18/bin:$PATH"
+ENV LD_LIBRARY_PATH="/lib:/lib64:/usr/lib:/usr/local/lib:/usr/lib/x86_64-linux-gnu:/usr/local/lib/x86_64-linux-gnu:/usr/local/include"
+ENV PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig:/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
 RUN mkdir /ffmpeg_sources /ffmpeg_build
 WORKDIR /ffmpeg_sources
 RUN apt-get update -qq && apt-get upgrade -y && apt-get install -y git-core wget && wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | tee /etc/apt/trusted.gpg.d/lunarg.asc && wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list http://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list && apt-get update -qq
@@ -54,13 +54,13 @@ RUN apt-get -y install \
     lsb-release software-properties-common
 RUN python3 -m pip install -U meson ninja
 RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && yes | ./llvm.sh 18 && apt-get -y install lld-18 clang-18 llvm-18 && ldconfig
-ENV CC=clang-18 CXX=clang++-18 LLVM=-18 LD=lld-18 AR=llvm-ar-18 HOSTCC=clang-18 HOSTCXX=clang++-18 HOSTAR=llvm-ar-18 HOSTLD=ld.lld-18
+ENV CC=clang-18 CXX=clang++-18 LLVM=-18 LD=lld-18 AR=llvm-ar-18 HOSTCC=clang-18 HOSTCXX=clang++-18 HOSTAR=llvm-ar-18 HOSTLD=lld-18 CXX_FLAGS="-march=native" CC_FLAGS="-march=native" C_FLAGS="-march=native" LD_FLAGS="-flto -fuse-linker-plugin -fuse-ld=lld-18"
 
-RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1.git && cd SVT-AV1/Build/linux && ./build.sh release --enable-lto --install -x -j$(nproc)
+RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1.git && cd SVT-AV1/Build/linux && ./build.sh release --install -x -j$(nproc)
 
-RUN git clone --branch master https://bitbucket.org/multicoreware/x265_git.git && cd x265_git/build/linux && cmake -G"Unix Makefiles" -DENABLE_SHARED=off -DCMAKE_CXX_FLAGS="-flto" ../../source && make -j$(nproc) && make install
+RUN git clone --branch master https://bitbucket.org/multicoreware/x265_git.git && cd x265_git/build/linux && cmake -G "Ninja" -DENABLE_SHARED=off ../../source && ninja install
 
-ARG AMF_VERSION=v1.4.33
+ARG AMF_VERSION="v1.4.34"
 RUN git clone --depth 1 --branch ${AMF_VERSION} https://github.com/GPUOpen-LibrariesAndSDKs/AMF.git && mkdir -p /usr/local/include/AMF && cp -r AMF/amf/public/include/* /usr/local/include/AMF
 
 # ARG VMAF_TAG=master
@@ -70,6 +70,22 @@ RUN git clone --depth 1 --branch ${AMF_VERSION} https://github.com/GPUOpen-Libra
 
 # ARG LIBPLACEBO_TAG="v5.264.1"
 # RUN git clone --recursive --branch ${LIBPLACEBO_TAG} https://code.videolan.org/videolan/libplacebo && cd libplacebo && meson setup build --buildtype=release --default-library=static --wipe && ninja -j 16 -Cbuild install
+
+ARG OPUS_VERSION="1.5.2"
+RUN wget "https://downloads.xiph.org/releases/opus/opus-${OPUS_VERSION}.tar.gz" -O - | tar xz
+RUN cd opus* && meson setup \
+    --buildtype=custom \
+    --default-library=static \
+    -Dextra-programs=disabled \
+    -Ddebug=false \
+    -Dtests=disabled \
+    -Db_staticpic=true \
+    -Dfixed-point=true \
+    -Db_asneeded=true \
+    -Db_pie=true \
+    -Ddocs=disabled \
+    -Dfixed-point=false \
+    --wipe build && meson install -C build && ldconfig
 
 ARG FFMPEG_TAG=master
 RUN git clone --depth=1 --branch ${FFMPEG_TAG} https://github.com/FFmpeg/FFmpeg.git && cd FFmpeg && ldconfig
@@ -85,6 +101,7 @@ RUN ./configure \
     --extra-libs="-lm -lpthread" \
     --extra-ldflags='-flto -fuse-linker-plugin -fuse-ld=lld-18' \
     --extra-cflags='-march=native' \
+    --extra-cxxflags='-march=native' \
     --cc="clang-18" \
     --cxx="clang++-18" \
     --ar="llvm-ar-18" \
