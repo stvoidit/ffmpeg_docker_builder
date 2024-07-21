@@ -9,9 +9,10 @@ ENV DEBIAN_FRONTEND="noninteractive"
 ENV CC="gcc-12" \
     CXX="g++-12" \
     CPP="cpp-12" \
-    CXX_FLAGS="-march=native -O3" \
-    CC_FLAGS="-march=native -O3" \
-    C_FLAGS="-march=native -O3"
+    CXXFLAGS="-march=native -O3" \
+    CCFLAGS="-march=native -O3" \
+    CFLAGS="-march=native -O3" \
+    LDFLAGS="-flto -fuse-linker-plugin"
 RUN mkdir /ffmpeg_sources /ffmpeg_build
 WORKDIR /ffmpeg_sources
 RUN apt-get update && apt-get install -y git wget lsb-release software-properties-common && wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | tee /etc/apt/trusted.gpg.d/lunarg.asc && wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list http://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list
@@ -100,9 +101,9 @@ RUN git clone --depth 1 https://code.videolan.org/videolan/x264.git && cd x264 &
 
 RUN git clone --branch master https://bitbucket.org/multicoreware/x265_git.git && cd x265_git/build/linux && cmake -G "Ninja" -DENABLE_SHARED=off ../../source && ninja install
 
-RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1.git && cd SVT-AV1/Build/linux && ./build.sh release --install -x -j$(nproc)
+RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1.git && cd SVT-AV1/Build/linux && ./build.sh --release --jobs=$(nproc) --enable-lto --enable-pgo --native --enable-avx512 --install -x
 
-RUN git clone --depth 1 https://chromium.googlesource.com/webm/libvpx.git && cd libvpx && ./configure --enable-static --enable-pic --enable-vp9-highbitdepth --disable-docs --disable-examples --disable-unit-tests --as=yasm && make -j8 && make install
+RUN git clone --depth 1 https://chromium.googlesource.com/webm/libvpx.git && cd libvpx && ./configure --enable-install-srcs --enable-codec-srcs --enable-static --enable-pic --enable-vp9-highbitdepth --enable-better-hw-compatibility --disable-docs --disable-examples --disable-unit-tests --as=nasm --target=x86_64-linux-gcc && make -j8 && make install
 
 ARG AMF_VERSION="v1.4.34"
 RUN git clone --depth 1 --branch ${AMF_VERSION} https://github.com/GPUOpen-LibrariesAndSDKs/AMF.git && mkdir -p /usr/local/include/AMF && cp -r AMF/amf/public/include/* /usr/local/include/AMF
@@ -112,8 +113,8 @@ RUN git clone --depth 1 --branch ${AMF_VERSION} https://github.com/GPUOpen-Libra
 
 # RUN git clone https://github.com/google/shaderc && cd shaderc && ./utils/git-sync-deps && mkdir build && cd build && cmake -GNinja -DENABLE_SHARED=off -DCMAKE_CXX_FLAGS="-flto" -DCMAKE_BUILD_TYPE=Release .. && ninja -j 16
 
-ARG LIBPLACEBO_TAG="v5.264.1"
-RUN git clone --recursive --branch ${LIBPLACEBO_TAG} https://code.videolan.org/videolan/libplacebo && cd libplacebo && meson setup build --buildtype=release --default-library=static --wipe && ninja -j 16 -Cbuild install
+# ARG LIBPLACEBO_TAG="v5.264.1"
+# RUN git clone --recursive --branch ${LIBPLACEBO_TAG} https://code.videolan.org/videolan/libplacebo && cd libplacebo && meson setup build --buildtype=release --default-library=static --wipe && ninja -j 16 -Cbuild install
 
 ARG FFMPEG_TAG=master
 RUN git clone --depth=1 --branch ${FFMPEG_TAG} https://github.com/FFmpeg/FFmpeg.git && cd FFmpeg && ldconfig
