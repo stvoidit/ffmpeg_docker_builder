@@ -6,12 +6,12 @@ ENV PATH="/usr/bin:/usr/local/bin:$PATH"
 ENV LD_LIBRARY_PATH="/lib:/lib64:/usr/lib:/usr/local/lib:/usr/lib/x86_64-linux-gnu:/usr/local/lib/x86_64-linux-gnu:/usr/local/include"
 ENV PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig:/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
 ENV DEBIAN_FRONTEND="noninteractive"
-ENV CC="gcc-12" \
-    CXX="g++-12" \
-    CPP="cpp-12" \
-    CXXFLAGS="-march=native -O3" \
-    CCFLAGS="-march=native -O3" \
-    CFLAGS="-march=native -O3" \
+ENV CC="clang-15" \
+    CXX="clang++-15" \
+    CPP="clang-15" \
+    LLVM="-15" \
+    LD="ld.lld-15" \
+    CFLAGS="-march=native -O2" \
     LDFLAGS="-flto -fuse-linker-plugin"
 RUN mkdir /ffmpeg_sources /ffmpeg_build
 WORKDIR /ffmpeg_sources
@@ -71,37 +71,37 @@ RUN apt-get update -qq && apt-get upgrade -y && apt-get -y install \
     python3-pip \
     libnuma-dev \
     libopus-dev \
+    libopusfile-dev \
     libdav1d-dev \
-    libgnutls28-dev \
     libunistring-dev \
     libvulkan-dev \
     vulkan-sdk \
-    gcc-12 \
-    g++-12 \
-    cpp-12
+    clang-15 \
+    llvm-15 \
+    lld-15
 RUN python3 -m pip install -U meson ninja && ldconfig
 
-ARG OPUS_VERSION="1.5.2"
-RUN wget "https://downloads.xiph.org/releases/opus/opus-${OPUS_VERSION}.tar.gz" -O - | tar xz
-RUN cd opus* && meson setup \
-    --buildtype=custom \
-    --default-library=static \
-    -Dextra-programs=disabled \
-    -Ddebug=false \
-    -Dtests=disabled \
-    -Db_staticpic=true \
-    -Dfixed-point=true \
-    -Db_asneeded=true \
-    -Db_pie=true \
-    -Ddocs=disabled \
-    -Dfixed-point=false \
-    --wipe build && meson install -C build && ldconfig
+# ARG OPUS_VERSION="1.5.2"
+# RUN wget "https://downloads.xiph.org/releases/opus/opus-${OPUS_VERSION}.tar.gz" -O - | tar xz
+# RUN cd opus* && meson setup \
+#     --buildtype=custom \
+#     --default-library=static \
+#     -Dextra-programs=disabled \
+#     -Ddebug=false \
+#     -Dtests=disabled \
+#     -Db_staticpic=true \
+#     -Dfixed-point=true \
+#     -Db_asneeded=true \
+#     -Db_pie=true \
+#     -Ddocs=disabled \
+#     -Dfixed-point=false \
+#     --wipe build && meson install -C build && ldconfig
 
 RUN git clone --depth 1 https://code.videolan.org/videolan/x264.git && cd x264 && ./configure --enable-static --enable-pic --disable-asm && make -j8 && make install
 
 RUN git clone --branch master https://bitbucket.org/multicoreware/x265_git.git && cd x265_git/build/linux && cmake -G "Ninja" -DENABLE_SHARED=off ../../source && ninja install
 
-RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1.git && cd SVT-AV1/Build/linux && ./build.sh --release --jobs=$(nproc) --enable-lto --enable-pgo --native --enable-avx512 --install -x
+RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1.git && cd SVT-AV1/Build/linux && ./build.sh --release --jobs=$(nproc) --enable-lto --native --enable-avx512 --install -x
 
 RUN git clone --depth 1 https://chromium.googlesource.com/webm/libvpx.git && cd libvpx && ./configure --enable-install-srcs --enable-codec-srcs --enable-static --enable-pic --enable-vp9-highbitdepth --enable-better-hw-compatibility --disable-docs --disable-examples --disable-unit-tests --as=nasm --target=x86_64-linux-gcc && make -j8 && make install
 
@@ -131,12 +131,12 @@ RUN ./configure \
     --prefix="/usr/local" \
     --pkg-config-flags="--static" \
     --extra-libs="-lm -lpthread" \
-    --extra-ldflags="-flto -fuse-linker-plugin" \
-    --extra-cflags='-march=native -O3' \
-    --extra-cxxflags='-march=native -O3' \
+    --extra-ldflags="-flto -fuse-linker-plugin -fuse-ld=lld-15" \
+    --extra-cflags='-march=native -O2' \
+    --extra-cxxflags='-march=native -O2' \
     --toolchain="hardened" \
-    --cc="gcc-12" \
-    --cxx="g++-12" \
+    --cc="clang-15" \
+    --cxx="clang++-15" \
     --enable-lto=full \
     --enable-static \
     --enable-thumb \
