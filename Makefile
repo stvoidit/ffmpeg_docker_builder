@@ -4,7 +4,7 @@ all: build compile
 
 .PHONY: build
 build:
-	docker build --rm -f Dockerfile -t ffmpeg-docker:dev .
+	docker build --rm -f Dockerfile.ubuntu24 -t ffmpeg-docker:dev .
 build.test:
 	docker build --rm -f Dockerfile.test -t ffmpeg-docker:test .
 
@@ -23,3 +23,5 @@ run.test:
 .PHONY: install
 install:
 	@install -v ./ffmpeg ./ffplay ./ffprobe -t ${HOME}/.local/bin/ && rm ./ffmpeg ./ffplay ./ffprobe
+clean:
+	@docker system prune --all -f

@@ -1,0 +1,120 @@
+FROM ubuntu:24.04
+ENV SHELL="/bin/bash"
+RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+RUN sed -Ei 's/http:\/\/[archive|security]+.ubuntu.com/http:\/\/mirror.docker.ru/gm' /etc/apt/sources.list.d/ubuntu.sources
+ENV PATH="/usr/bin:/usr/local/bin:$PATH"
+ENV LD_LIBRARY_PATH="/lib:/lib64:/usr/lib:/usr/local/lib:/usr/lib/x86_64-linux-gnu:/usr/local/lib/x86_64-linux-gnu:/usr/local/include"
+ENV PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig:/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig"
+ENV DEBIAN_FRONTEND="noninteractive"
+ENV CC="clang-18" \
+    CXX="clang++-18" \
+    CPP="clang-18" \
+    LLVM="-18" \
+    LD="ld.lld-18"
+RUN apt-get update -qq && apt-get install -y git wget autoconf automake nasm diffutils cmake clang-18 llvm-18 lld-18 lldb-18 git wget lsb-release software-properties-common python3-full python3-pip libyaml-cpp* libfdk-aac-dev libtls-dev libv4l-dev libx265-dev libnuma-dev librtmp-dev libopenh264-dev libunistring-dev
+RUN apt-get build-dep ffmpeg -y
+RUN pip install --break-system-packages ninja meson
+RUN wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | tee /etc/apt/trusted.gpg.d/lunarg.asc && wget -qO /etc/apt/sources.list.d/lunarg-vulkan-noble.list http://packages.lunarg.com/vulkan/lunarg-vulkan-noble.list && apt-get update -qq && apt-get install -y vulkan-sdk
+RUN apt-get upgrade -y
+RUN mkdir /ffmpeg_sources /ffmpeg_build
+WORKDIR /ffmpeg_sources
+# # ARG OPUS_VERSION="1.5.2"
+# # RUN wget "https://downloads.xiph.org/releases/opus/opus-${OPUS_VERSION}.tar.gz" -O - | tar xz
+# # RUN cd opus* && meson setup \
+# #     --buildtype=custom \
+# #     --default-library=static \
+# #     -Dextra-programs=disabled \
+# #     -Ddebug=false \
+# #     -Dtests=disabled \
+# #     -Db_staticpic=true \
+# #     -Dfixed-point=true \
+# #     -Db_asneeded=true \
+# #     -Db_pie=true \
+# #     -Ddocs=disabled \
+# #     -Dfixed-point=false \
+# #     --wipe build && meson install -C build && ldconfig
+
+RUN git clone --depth 1 https://code.videolan.org/videolan/x264.git && cd x264 && ./configure --enable-static --enable-pic --disable-asm && make -j8 && make install
+
+# RUN git clone --branch master https://bitbucket.org/multicoreware/x265_git.git && cd x265_git/build/linux && cmake -G "Ninja" -DENABLE_SHARED=off ../../source && ninja install
+
+RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1.git && cd SVT-AV1/Build/linux && ./build.sh --release --jobs=$(nproc) --enable-lto --native --install -x
+
+# RUN git clone --depth 1 https://chromium.googlesource.com/webm/libvpx.git && cd libvpx && ./configure --enable-install-srcs --enable-codec-srcs --enable-static --enable-pic --enable-vp9-highbitdepth --enable-better-hw-compatibility --disable-docs --disable-examples --disable-unit-tests --as=nasm --target=x86_64-linux-gcc && make -j8 && make install
+
+ARG AMF_VERSION="master"
+RUN git clone --depth 1 --branch ${AMF_VERSION} https://github.com/GPUOpen-LibrariesAndSDKs/AMF.git && mkdir -p /usr/local/include/AMF && cp -r AMF/amf/public/include/* /usr/local/include/AMF
+
+# # ARG VMAF_TAG=master
+# # RUN git clone --branch ${VMAF_TAG} https://github.com/Netflix/vmaf.git && cd vmaf && make deps && .venv/bin/meson setup libvmaf/build libvmaf --buildtype release -Denable_avx512=true -Denable_float=true --default-library=static && .venv/bin/ninja -vC libvmaf/build install
+
+# # RUN git clone https://github.com/google/shaderc && cd shaderc && ./utils/git-sync-deps && mkdir build && cd build && cmake -GNinja -DENABLE_SHARED=off -DCMAKE_CXX_FLAGS="-flto" -DCMAKE_BUILD_TYPE=Release .. && ninja -j 16
+
+# # ARG LIBPLACEBO_TAG="v5.264.1"
+# # RUN git clone --recursive --branch ${LIBPLACEBO_TAG} https://code.videolan.org/videolan/libplacebo && cd libplacebo && meson setup build --buildtype=release --default-library=static --wipe && ninja -j 16 -Cbuild install
+
+ARG FFMPEG_TAG=master
+RUN git clone --depth=1 --branch ${FFMPEG_TAG} https://github.com/FFmpeg/FFmpeg.git && cd FFmpeg && ldconfig
+WORKDIR /ffmpeg_sources/FFmpeg
+
+# # # --enable-libvmaf --ld="g++-12" \
+# # --enable-libplacebo \
+# # --extra-ldflags='-flto -fuse-linker-plugin -fuse-ld=lld-18' \
+# # --enable-cross-compile \
+# # --enable-libplacebo \
+RUN ./configure \
+    --target-os="linux" \
+    --arch="x86_64" \
+    --prefix="/usr/local" \
+    --pkg-config-flags="--static" \
+    --extra-libs="-lm -lpthread" \
+    --extra-ldflags="-flto -fuse-linker-plugin" \
+    --extra-cflags='-march=native -O2' \
+    --extra-cxxflags='-march=native -O2' \
+    --toolchain="hardened" \
+    --cc="clang-18" \
+    --cxx="clang++-18" \
+    --enable-lto=full \
+    --enable-static \
+    --enable-thumb \
+    --enable-pic \
+    --enable-pthreads \
+    --enable-gpl \
+    --enable-version3 \
+    --enable-nonfree \
+    --enable-amf \
+    --enable-libfdk-aac \
+    --enable-libopenjpeg \
+    --enable-openssl \
+    --enable-libass \
+    --enable-libtls \
+    --enable-libfreetype \
+    --enable-libmp3lame \
+    --enable-libopus \
+    --enable-libdav1d \
+    --enable-libvorbis \
+    --enable-libvpx \
+    --enable-libxvid \
+    --enable-vulkan \
+    --enable-libx264 \
+    --enable-libx265 \
+    --enable-libsvtav1 \
+    --enable-libglslang \
+    --enable-libdrm \
+    --enable-opengl \
+    --enable-libv4l2 \
+    --enable-libopenh264 \
+    --enable-gmp \
+    --enable-frei0r \
+    --enable-gcrypt \
+    --enable-libdc1394 \
+    --enable-libiec61883 \
+    --enable-libxcb \
+    --enable-libxcb-shm \
+    --enable-libxcb-xfixes \
+    --enable-libxcb-shape \
+    --enable-librtmp \
+    --disable-shared \
+    --disable-debug \
+    --disable-doc
+CMD make -j$(nproc) && mv -v ffmpeg ffplay ffprobe -t /ffmpeg_build/
